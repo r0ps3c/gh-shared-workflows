@@ -1,0 +1,22 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "dependencyDashboard": false,
+  "minimumReleaseAge": "2 days",
+  "packageRules": [
+    {
+      "description": "GitHub Actions updates with 2-day stabilization",
+      "matchManagers": ["github-actions"],
+      "minimumReleaseAge": "2 days",
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "ignoreTests": false,
+      "pinDigests": true
+    }
+  ],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "timezone": "UTC"
+}
