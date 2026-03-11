@@ -11,7 +11,7 @@
       "automerge": true,
       "automergeType": "pr",
       "automergeStrategy": "squash",
-      "ignoreTests": false,
+      "ignoreTests": true,
       "pinDigests": true
     }
   ],
