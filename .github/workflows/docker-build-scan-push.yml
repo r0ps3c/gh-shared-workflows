@@ -11,6 +11,10 @@ on:
         description: 'Shell command run inside the container that outputs a version string (e.g. "apk info foo | grep ...")'
         type: string
         required: true
+      primary-branch:
+        description: 'Primary branch name used for tagging (e.g. "main" or "master")'
+        type: string
+        default: 'main'
       test-command:
         description: 'Shell command(s) to run tests after build and scan (optional, e.g. "make test-structure && make test-integration")'
         type: string
@@ -38,29 +42,29 @@ jobs:
       - name: Build image
         run: make build
 
-      - name: Security scan with Trivy
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+      - name: Security scan with Grype
+        id: grype-sarif
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
         with:
-          image-ref: ${{ inputs.image-ref }}
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '1'  # Fail build on critical vulnerabilities
-          ignore-unfixed: true  # Only fail on fixable issues
+          image: ${{ inputs.image-ref }}
+          output-format: sarif
+          severity-cutoff: high
+          fail-build: true
+          only-fixed: true
 
-      - name: Upload Trivy results to GitHub Security tab
+      - name: Upload Grype results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc # v4.34.1
         if: always()  # Upload even if scan fails
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: ${{ steps.grype-sarif.outputs.sarif }}
 
-      - name: Run Trivy scan summary
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+      - name: Run Grype scan summary
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
         with:
-          image-ref: ${{ inputs.image-ref }}
-          format: 'table'
-          severity: 'CRITICAL,HIGH,MEDIUM'
-          exit-code: '0'  # Don't fail, just show summary
+          image: ${{ inputs.image-ref }}
+          output-format: table
+          severity-cutoff: medium
+          fail-build: false
 
       - name: Run tests
         if: inputs.test-command != ''
@@ -89,7 +93,7 @@ jobs:
 
       - name: Check stable tag compatibility
         id: check-stable
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', inputs.primary-branch)
         env:
           VERSION_EXTRACT: ${{ inputs.version-extract-command }}
         run: |
@@ -122,11 +126,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=main,enable=${{ github.ref == format('refs/heads/{0}', inputs.primary-branch) }}
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', inputs.primary-branch) }}
             type=raw,value=${{ steps.extract-version.outputs.full_version }},enable=true
-            type=raw,value=${{ steps.extract-version.outputs.major_version }},enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=stable,enable=${{ github.ref == 'refs/heads/main' && steps.check-stable.outputs.safe_to_update == 'true' }}
+            type=raw,value=${{ steps.extract-version.outputs.major_version }},enable=${{ github.ref == format('refs/heads/{0}', inputs.primary-branch) }}
+            type=raw,value=stable,enable=${{ github.ref == format('refs/heads/{0}', inputs.primary-branch) && steps.check-stable.outputs.safe_to_update == 'true' }}
             type=raw,value=stable,enable=${{ github.ref == 'refs/heads/stable' }}
 
       - name: Build and push Docker image
