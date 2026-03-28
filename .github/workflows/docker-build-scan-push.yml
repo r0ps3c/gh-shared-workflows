@@ -11,7 +11,7 @@ on:
         description: 'Shell command run inside the container that outputs a version string (e.g. "apk info foo | grep ...")'
         type: string
         required: true
-      primary-branch:
+      primary_branch:
         description: 'Primary branch name used for tagging (e.g. "main" or "master")'
         type: string
         default: 'main'
@@ -93,7 +93,7 @@ jobs:
 
       - name: Check stable tag compatibility
         id: check-stable
-        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', inputs.primary-branch)
+        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', inputs.primary_branch)
         env:
           VERSION_EXTRACT: ${{ inputs.version-extract-command }}
         run: |
@@ -126,11 +126,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=main,enable=${{ github.ref == format('refs/heads/{0}', inputs.primary-branch) }}
-            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', inputs.primary-branch) }}
+            type=raw,value=main,enable=${{ github.ref == format('refs/heads/{0}', inputs.primary_branch) }}
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', inputs.primary_branch) }}
             type=raw,value=${{ steps.extract-version.outputs.full_version }},enable=true
-            type=raw,value=${{ steps.extract-version.outputs.major_version }},enable=${{ github.ref == format('refs/heads/{0}', inputs.primary-branch) }}
-            type=raw,value=stable,enable=${{ github.ref == format('refs/heads/{0}', inputs.primary-branch) && steps.check-stable.outputs.safe_to_update == 'true' }}
+            type=raw,value=${{ steps.extract-version.outputs.major_version }},enable=${{ github.ref == format('refs/heads/{0}', inputs.primary_branch) }}
+            type=raw,value=stable,enable=${{ github.ref == format('refs/heads/{0}', inputs.primary_branch) && steps.check-stable.outputs.safe_to_update == 'true' }}
             type=raw,value=stable,enable=${{ github.ref == 'refs/heads/stable' }}
 
       - name: Build and push Docker image
